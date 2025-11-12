@@ -144,6 +144,7 @@ help: ## Show ALL available commands
 # Installation
 install: ## Install all dependencies
 	@echo "Installing workspace dependencies..."
+	uv venv --python 3.11
 	uv sync --group dev
 	@echo ""
 	@echo "Installing npm packages globally..."
@@ -156,12 +157,32 @@ install: ## Install all dependencies
 		exit 1; \
 	}
 	@echo ""
+	@echo "Configuring VSCode settings for cross-platform compatibility..."
+	@# Backup original settings if not already backed up
+	@if [ ! -f .vscode/settings.json.backup ]; then \
+		echo "  Creating backup of VSCode settings..."; \
+		cp .vscode/settings.json .vscode/settings.json.backup; \
+	fi
+	@# Detect platform and set appropriate Python paths
+	@if [ -f .venv/Scripts/python.exe ]; then \
+		echo "  Configuring for Windows..."; \
+		sed -i.tmp 's|\.venv/bin/python|.venv/Scripts/python.exe|g' .vscode/settings.json && rm -f .vscode/settings.json.tmp; \
+	elif [ -f .venv/bin/python ]; then \
+		echo "  Configuring for Unix/Linux/Mac..."; \
+		sed -i.tmp 's|\.venv/Scripts/python\.exe|.venv/bin/python|g' .vscode/settings.json && rm -f .vscode/settings.json.tmp; \
+	fi
+	@echo "  ✓ VSCode settings configured"
+	@echo ""
 	@echo "✅ All dependencies installed!"
 	@echo ""
 	@if [ -n "$$VIRTUAL_ENV" ]; then \
 		echo "✓ Virtual environment already active"; \
-	elif [ -f .venv/bin/activate ]; then \
-		echo "→ Run this command: source .venv/bin/activate"; \
+	elif [ -f .venv/bin/activate ] || [ -f .venv/Scripts/activate ]; then \
+		if [ -f .venv/bin/activate ]; then \
+			echo "→ Run this command: source .venv/bin/activate"; \
+		else \
+			echo "→ Run this command: .venv\\Scripts\\activate"; \
+		fi; \
 	else \
 		echo "✗ No virtual environment found. Run 'make install' first."; \
 	fi
